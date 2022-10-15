@@ -1,0 +1,74 @@
+[gd_resource type="VisualShader" load_steps=3 format=3 uid="uid://8j33bbux3do4"]
+
+[sub_resource type="VisualShaderNodeExpression" id="VisualShaderNodeExpression_uldo2"]
+size = Vector2(630.738, 331.226)
+expression = "float dist2edge = min(min(COLOR.r, COLOR.g), COLOR.b);
+bool isedge = (smoothstep(0.05, 0.05+fwidth(dist2edge), dist2edge)) < 0.5;
+if (isedge){res = vec3(0.0, 1.0, 0.0);}
+else {discard;}"
+
+[sub_resource type="VisualShaderNodeExpression" id="VisualShaderNodeExpression_arj2m"]
+size = Vector2(570.027, 384.967)
+expression = "vec3 colours[3] = vec3[3](vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1));
+col = vec4(colours[VERTEX_ID % 3], 1);"
+
+[resource]
+code = "shader_type spatial;
+render_mode specular_disabled;
+
+
+
+
+void vertex() {
+	vec4 n_out2p0;
+// Expression:2
+	n_out2p0 = vec4(0.0, 0.0, 0.0, 0.0);
+	{
+		vec3 colours[3] = vec3[3](vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1));
+		n_out2p0 = vec4(colours[VERTEX_ID % 3], 1);
+	}
+
+
+// Output:0
+	COLOR.rgb = vec3(n_out2p0.xyz);
+
+
+}
+
+void fragment() {
+	vec3 n_out17p0;
+// Expression:17
+	n_out17p0 = vec3(0.0, 0.0, 0.0);
+	{
+		float dist2edge = min(min(COLOR.r, COLOR.g), COLOR.b);
+		bool isedge = (smoothstep(0.05, 0.05+fwidth(dist2edge), dist2edge)) < 0.5;
+		if (isedge){n_out17p0 = vec3(0.0, 1.0, 0.0);}
+		else {discard;}
+	}
+
+
+// Output:0
+	ALBEDO = n_out17p0;
+
+
+}
+"
+modes/specular = 2
+nodes/vertex/2/node = SubResource("VisualShaderNodeExpression_arj2m")
+nodes/vertex/2/position = Vector2(-400, 200)
+nodes/vertex/2/size = Vector2(570.027, 384.967)
+nodes/vertex/2/input_ports = ""
+nodes/vertex/2/output_ports = "0,4,col;"
+nodes/vertex/2/expression = "vec3 colours[3] = vec3[3](vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1));
+col = vec4(colours[VERTEX_ID % 3], 1);"
+nodes/vertex/connections = PackedInt32Array(2, 0, 0, 6)
+nodes/fragment/17/node = SubResource("VisualShaderNodeExpression_uldo2")
+nodes/fragment/17/position = Vector2(-400, 200)
+nodes/fragment/17/size = Vector2(630.738, 331.226)
+nodes/fragment/17/input_ports = ""
+nodes/fragment/17/output_ports = "0,3,res;"
+nodes/fragment/17/expression = "float dist2edge = min(min(COLOR.r, COLOR.g), COLOR.b);
+bool isedge = (smoothstep(0.05, 0.05+fwidth(dist2edge), dist2edge)) < 0.5;
+if (isedge){res = vec3(0.0, 1.0, 0.0);}
+else {discard;}"
+nodes/fragment/connections = PackedInt32Array(17, 0, 0, 0)

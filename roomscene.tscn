@@ -1,0 +1,77 @@
+[gd_scene load_steps=6 format=3 uid="uid://cpie72yia832f"]
+
+[ext_resource type="Script" path="res://Assets/Resources/Classes/Room.gd" id="1_kfpx2"]
+[ext_resource type="Shader" uid="uid://8j33bbux3do4" path="res://Assets/Resources/Shaders/VisualizersShader.tres" id="2_ae5p6"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_n08hh"]
+render_priority = 0
+shader = ExtResource("2_ae5p6")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_dpjyd"]
+_surfaces = [{
+"aabb": AABB(-6, 0, -8, 6, 1e-05, 8),
+"format": 1,
+"primitive": 3,
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 0)
+}, {
+"aabb": AABB(-6, 0, -8, 6, 2, 1.00136e-05),
+"format": 1,
+"primitive": 3,
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193)
+}, {
+"aabb": AABB(-6, 0, -8, 1.00136e-05, 2, 8),
+"format": 1,
+"primitive": 3,
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 0)
+}, {
+"aabb": AABB(-6, 2, -8, 6, 1.00136e-05, 8),
+"format": 1,
+"primitive": 3,
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 193)
+}, {
+"aabb": AABB(-6, 0, 0, 6.00001, 2, 1e-05),
+"format": 1,
+"primitive": 3,
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 192, 192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 192, 0, 0, 0, 64, 0, 0, 0, 0)
+}, {
+"aabb": AABB(0, 0, -8, 1e-05, 2, 8),
+"format": 1,
+"primitive": 3,
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 193, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="BoxMesh" id="BoxMesh_cbuhq"]
+
+[node name="Room" type="Node3D"]
+script = ExtResource("1_kfpx2")
+boundingBox = AABB(-6, 0, -8, 0, 2, 0)
+roomMeshNode = NodePath("Content/RoomMesh")
+doorNodesRoot = NodePath("Content/doors")
+
+[node name="Visualizer" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 8)
+material_override = SubResource("ShaderMaterial_n08hh")
+cast_shadow = 0
+gi_mode = 0
+mesh = SubResource("ArrayMesh_dpjyd")
+
+[node name="Content" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 8)
+
+[node name="doors" type="Node3D" parent="Content"]
+
+[node name="Door1" type="Marker3D" parent="Content/doors"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+
+[node name="RoomMesh" type="Node3D" parent="Content"]
+
+[node name="MeshInstance3d" type="MeshInstance3D" parent="Content/RoomMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.54278, 0.613047, -7.39028)
+mesh = SubResource("BoxMesh_cbuhq")
+skeleton = NodePath("../../..")

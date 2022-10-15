@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://bn87nnd18mh6s"]
+
+[ext_resource type="Script" path="res://root.gd" id="1_ii8m3"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_bn3bp"]
+
+[node name="root" type="Node3D"]
+script = ExtResource("1_ii8m3")
+
+[node name="GridMap" type="GridMap" parent="."]
+
+[node name="MeshInstance3d" type="MeshInstance3D" parent="."]
+mesh = SubResource("ArrayMesh_bn3bp")

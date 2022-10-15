@@ -1,0 +1,9 @@
+[gd_scene load_steps=4 format=3 uid="uid://l0ja5ces7c15"]
+
+[ext_resource type="Script" path="res://Generation.gd" id="1_j2fla"]
+[ext_resource type="PackedScene" uid="uid://cpie72yia832f" path="res://roomscene.tscn" id="2_i2ttu"]
+[ext_resource type="PackedScene" uid="uid://o4xv5mtrjixw" path="res://roomscene2.tscn" id="3_bs4yb"]
+
+[node name="Node3d" type="Node3D"]
+script = ExtResource("1_j2fla")
+roomList = [ExtResource("2_i2ttu"), ExtResource("3_bs4yb"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu"), ExtResource("3_bs4yb"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu")]
