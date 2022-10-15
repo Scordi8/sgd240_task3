@@ -29,6 +29,9 @@ class SizeMap:
 	var scenes : Array ## All added Scenes
 	var cells : Array ## All cells
 	var cells_nz : Array ## Non-Zero cells
+	var cells_weight : Array ## Weight map for cells
+	var cells_index : Array ## Cell index map
+	var doorCells : PackedVector3Array ## Array of cells that connect to doors
 	
 	func _init(_size:Vector3=size) -> void:
 		size = _size
@@ -45,11 +48,24 @@ class SizeMap:
 				nz_x.append(nz_y)
 			cells.append(_x)
 			cells_nz.append(nz_x)
+			cells_weight.append(nz_x)
 		
 	
 	## Returns the distance vectors at requested cell
 	func get_cell_space(cell:Vector3) -> Vector3:
 		return cells[cell.x][cell.y][cell.z]
+	
+	## Returns the neighbouring cells
+	func get_cell_neumann(cell:Vector3, _require_free:bool=false) -> PackedVector3Array:
+		var arr : PackedVector3Array = []
+		for offset in NEUMANN_OFFSET: ## For every neighouring cell
+			var celloffset : Vector3 = cell + offset
+			if _require_free: ## If we're looking for pathfindable cells only
+				if cells_nz[celloffset.x][celloffset.y][celloffset.z] < 1: ## check the cell is free
+					arr.append(celloffset)
+			else: ## Doesn't care if the cell is obstructed
+				arr.append(celloffset)
+		return arr
 	
 	## Set a cell to zero and update all the dependant cells
 	func zero_cell_recursive(cell:Vector3) -> void:
@@ -87,7 +103,7 @@ class SizeMap:
 		if res: print("Remaining space: ", space, ", returns: ", res, " for position: ", pos, ", taking ", debugDepth, " tries")
 		return res
 	
-	func fit_in_bounds(lowerBounds:Vector3, upperBounds:Vector3, roomSize:Vector3, debugDepth:int=0) -> Array:
+	func fit_in_bounds(_lowerBounds:Vector3, upperBounds:Vector3, roomSize:Vector3, debugDepth:int=0) -> Array:
 		for x in range(0, upperBounds.x):
 			for y in range(0, upperBounds.y):
 				for z in range(0, upperBounds.z):
@@ -126,7 +142,13 @@ class SizeMap:
 		if res[0]: scenes.append([room, res[1]])
 		else: push_warning("Could not add room")
 	
+	func register_doors() -> void:
+		pass
+		## For each door,
+		## 
 	
+	func generate_weightmap() -> void:
+		pass
 
 
 func generate():

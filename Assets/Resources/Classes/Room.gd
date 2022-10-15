@@ -6,6 +6,7 @@ class_name Room extends Node3D
 @onready var contentNode : Node3D = $Content
 @export var roomMeshNode : NodePath
 @export var doorNodesRoot : NodePath
+var doorData : Array[Array] = []
 
 @export var _validate : bool = false :
 	get:return false
@@ -61,6 +62,7 @@ func validate():
 	## Marker position rounding
 	for _child in get_node(doorNodesRoot).get_children():
 		var child : Marker3D = _child
+		var door : Array = [child, Vector3.ZERO] ## Node , direction
 		child.position = round(child.position)
 
 		## get closest side
@@ -108,17 +110,21 @@ func validate():
 				child.position.x = wallpos.x
 				child.position.y = clampY.call(child, boundingBox)
 				child.position.z = clampZ.call(child, boundingBox)
+				door[1] = Vector3(1, 0, 0)
 		else:
 			if wallpos.y < wallpos.z:
 				## Wallpos Y is the closest
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = wallpos.y
 				child.position.z = clampZ.call(child, boundingBox)
+				door[1] = Vector3(0, 1, 0)
 			else:
 				## Wallpos Z is the closest
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = clampY.call(child, boundingBox)
 				child.position.z = wallpos.z
+				door[1] = Vector3(0, 0, 1)
+		doorData.append(door)
 	## Marker position ended
 	
 	## Reposition everything so it fits within the boundries
