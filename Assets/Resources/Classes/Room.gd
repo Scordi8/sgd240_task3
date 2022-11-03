@@ -7,6 +7,7 @@ class_name Room extends Node3D
 @export var roomMeshNode : NodePath
 @export var doorNodesRoot : NodePath
 var doorData : Array[Array] = []
+const visualizerMaterial : String = "res://Assets/Resources/Models/materials/Visualizer.tres"
 
 @export var _validate : bool = false :
 	get:return false
@@ -20,6 +21,7 @@ var doorData : Array[Array] = []
 		_visualize = false
 		visualize()
 
+@export var visualizermeshNode : NodePath
 var visualizermesh : MeshInstance3D
 
 # Called when the node enters the scene tree for the first time.
@@ -29,6 +31,8 @@ func _ready() -> void:
 
 func validate():
 	print("Validating")
+	visualizermesh = get_node(visualizermeshNode)
+	
 	### Check and generate an AABB for the room, ceil it up
 	var min_pos : Vector3 = Vector3.ZERO
 	var max_size : Vector3 = Vector3.ZERO
@@ -69,13 +73,17 @@ func validate():
 		var mid : Vector3 = boundingBox.get_center()
 		var disttowall : Vector3 ## How far away from the wall it is
 		var wallpos : Vector3 ## Where the wall is
-		
-		if child.position.x < mid.x:
+		print(mid, child.position)
+		print(child.position.x > mid.x)
+		print(boundingBox.position.x, " ", child.position.x)
+
+
+		if child.position.x > mid.x:
 			wallpos.x = boundingBox.position.x
-			disttowall.x = wallpos.x + child.position.x
+			disttowall.x = abs(boundingBox.position.x - child.position.x)
 		else:
 			wallpos.x = boundingBox.size.x
-			disttowall.x = wallpos.x - child.position.x
+			disttowall.x = abs(boundingBox.size.x - child.position.x)
 		
 		if child.position.y < mid.y:
 			wallpos.y = boundingBox.position.y
@@ -92,33 +100,45 @@ func validate():
 			disttowall.z = wallpos.z - child.position.z
 		
 		var clampX : Callable = func(_c:Marker3D, _bb:AABB) -> float: return clamp(_c.position.x,
-			min(_bb.position.x+1, _bb.end.x-1),
-			max(_bb.position.x+1, _bb.end.x-1))
+			min(_bb.position.x, _bb.size.x),
+			max(_bb.position.x, _bb.size.x))
 		
 		var clampY : Callable = func(_c:Marker3D, _bb:AABB) -> float: return clamp(_c.position.y,
-			min(_bb.position.y+1, _bb.size.y-1),
-			max(_bb.position.y+1, _bb.size.y-1))
+			min(_bb.position.y, _bb.size.y),
+			max(_bb.position.y, _bb.size.y))
 		
 		var clampZ : Callable = func(_c:Marker3D, _bb:AABB) -> float: return clamp(_c.position.z,
-			min(_bb.position.z+1, _bb.end.z-1),
-			max(_bb.position.z+1, _bb.end.z-1))
+			min(_bb.position.z, _bb.size.z),
+			max(_bb.position.z, _bb.size.z))
 		
+		print("Wall pos: ", wallpos)
+		print("Dist to wall: ", disttowall)
 		## Get the closest wall
-		if wallpos.x < wallpos.y:
-			if wallpos.x < wallpos.z:
+		if disttowall.x <= disttowall.y: # X is closer then y
+			if disttowall.x <= disttowall.z: # x is closer then z
+				print("X is closest")
 				## Wallpos X is the closest
 				child.position.x = wallpos.x
 				child.position.y = clampY.call(child, boundingBox)
 				child.position.z = clampZ.call(child, boundingBox)
 				door[1] = Vector3(1, 0, 0)
+			else: # X is closer then y, but not closer then z, z is closest
+				print("Z is closest A")
+				## Wallpos Z is the closest
+				child.position.x = clampX.call(child, boundingBox)
+				child.position.y = clampY.call(child, boundingBox)
+				child.position.z = wallpos.z
+				door[1] = Vector3(0, 0, 1)
 		else:
-			if wallpos.y < wallpos.z:
+			if disttowall.y < disttowall.z:
+				print("Y is closest")
 				## Wallpos Y is the closest
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = wallpos.y
 				child.position.z = clampZ.call(child, boundingBox)
 				door[1] = Vector3(0, 1, 0)
 			else:
+				print("Z is closest B")
 				## Wallpos Z is the closest
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = clampY.call(child, boundingBox)
@@ -164,3 +184,5 @@ func visualize():
 	## Make it visible in the game world
 	visualizermesh = $Visualizer
 	visualizermesh.mesh = arr_mesh
+	
+	visualizermesh.material_override = load(visualizerMaterial)

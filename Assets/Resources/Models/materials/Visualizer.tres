@@ -1,0 +1,7 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://cutbyweydlfgf"]
+
+[ext_resource type="Shader" uid="uid://8j33bbux3do4" path="res://Assets/Resources/Shaders/VisualizersShader.tres" id="1_87v13"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_87v13")
