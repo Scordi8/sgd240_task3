@@ -31,25 +31,29 @@ class SizeMap:
 	var cells_nz : Array ## Non-Zero cells
 	var cells_weight : Array ## Weight map for cells
 	var cells_index : Array ## Cell index map
-	var doorCells : PackedVector3Array ## Array of cells that connect to doors
+	var doorCells : Array ## Array of cells that connect to doors, and their orientation
 	
 	func _init(_size:Vector3=size) -> void:
 		size = _size
 		for x in range(size.x):
 			var _x : Array = []
 			var nz_x : Array = []
+			var w_x : Array = []
 			for y in range(size.y):
 				var _y : Array = []
 				var nz_y : Array = []
+				var w_y : Array = []
 				for z in range(size.y):
 					_y.append(Vector3(size.x-x, size.y-y, size.z-z))
 					nz_y.append(0)
+					w_y.append(-1)
 				_x.append(_y)
 				nz_x.append(nz_y)
+				w_x.append(w_y)
 			cells.append(_x)
 			cells_nz.append(nz_x)
-			cells_weight.append(nz_x)
-		
+			cells_weight.append(w_x)
+			cells_index.append(w_x)
 	
 	## Returns the distance vectors at requested cell
 	func get_cell_space(cell:Vector3) -> Vector3:
@@ -87,7 +91,7 @@ class SizeMap:
 		for z in range(cell.z):
 			cells[cell.x][cell.y][z].z -= max(cells[cell.x][cell.y][z].z - z, 0)
 		
-		cells_nz[cell.x][cell.y][cell.z] = -1 ## Flag non zero cells for removal
+		cells_nz[cell.x][cell.y][cell.z] = -1 ## Flag cell as non-zero
 	
 	## Update the SizeMap space with the shape at position
 	func place_shape(pos:Vector3, _size:Vector3) -> void:
@@ -111,9 +115,7 @@ class SizeMap:
 					if check_fit(pos, roomSize, debugDepth):
 						place_shape(pos, roomSize)
 						return [true, pos]
-
 		return [false, null]
-
 	
 	func boxfit(roomSize:Vector3, shapeGrowthWeights:Vector3=Vector3.ONE) -> Array:
 		var lowerBounds : Vector3 = Vector3.ZERO
@@ -143,13 +145,78 @@ class SizeMap:
 		else: push_warning("Could not add room")
 	
 	func register_doors() -> void:
-		pass
-		## For each door,
-		## 
+		for _scene in scenes: ## For each door
+			var room : Room = _scene[0]
+			var door : Array = room.doorData
+			var door_pos : Vector3 = door[0].position + _scene[1] ## get it's cell position (room pos + local pos)
+			var test_pos : Vector3 = door_pos + door[1]
+			if cells_nz[test_pos.x][test_pos.y][test_pos.z] == -1:
+				test_pos = door_pos - door[1]
+			doorCells.append([door_pos, door[1], test_pos]) ## Door position, direction, connected cell
 	
-	func generate_weightmap() -> void:
-		pass
+	func create_map(pos:Vector3, path_open:Array[Vector3], level:int) -> Array[Vector3]:
+		## Generate a distance based on the map
+		path_open.erase(pos)
+		var x_valid : bool = pos.x >= 0 and pos.x <= size.x ## Is within the X bounds
+		var y_valid : bool = pos.y >= 0 and pos.y <= size.y ## Is within the X bounds
+		var z_valid : bool = pos.z >= 0 and pos.z <= size.z ## Is within the X bounds
+		if not (x_valid and y_valid and z_valid): return path_open
+		for offset in NEUMANN_OFFSET:
+			var test_pos : Vector3 = pos + offset
+			## (below) Checkng the cell beneath is not a room, and hasn't been set yet
+			if (cells_nz[test_pos.x][test_pos.y][test_pos.z] != -1 and ## If the cell isnt obstructed
+			cells_weight[test_pos.x][test_pos.y][test_pos.z] != -1): ## If the cell hasn't been checked yet
+				cells_weight[test_pos.x][test_pos.y][test_pos.z] = level ## Set the cell in the map to the depth
+				path_open.append(test_pos) ## add the cell to the path
+		return path_open
+	
+	func weightmap_generate() -> void:
+		print("Calculating Weightmap")
+		var startingpos : Vector3 = Vector3.ZERO
+		var path_open : Array[Vector3] = [startingpos]
+		var level : int = 1 ## the depth / distance from the starting point
+		while len(path_open) > 0 and level < 10000: ## While there's still unchecked rooms
+			var _path_open = path_open.duplicate()
+			for point in _path_open:
+				path_open = create_map(point, path_open, level)
+			level += 1
+	
+	func sort_by_2nd(a:Array, b:Array) -> bool: return a[1] > b[1]
+	
+	## Weighmap backtrack gets the lowest weighted cell within the sizemap's bounds
+	func weightmap_backtrack(pos:Vector3, path:Array[Vector3]) -> Array[Vector3]:
+		var _path : Array[Vector3] = [] ## Array to contain the possible neighbours
+		var _result : Array[Vector3] = path.duplicate() ## Duplicate as to not alter the original
+		
+		for offset in NEUMANN_OFFSET: ## For each neighouring cell
+			var test_pos : Vector3 = pos + offset
+			var test_depth : int = cells_weight[test_pos.x][test_pos.y][test_pos.z]
+			## Method of removing lattice, if there's aready a connected hallway, end the path
+			if cells_weight[test_pos.x][test_pos.y][test_pos.z] != -1:
+				_result.append(test_pos)
+				return _result
+			## Check if the cell isn't a wall
+			if cells_nz[test_pos.x][test_pos.y][test_pos.z] != -1:
+				_path.append([test_pos, test_depth]) ## Make it checkable
+		
+		_path.sort_custom(self.sort_by_2nd) ## Sorts via the 2nd element of array
+		_result.append(_path[-1][0]) ## Add lowest cell to path
+		return _result ## Return path
+	
+	## Backtracks the path from a provided destination to the lowest weightmap point
+	func weightmap_get_path(dest:Vector3) -> void:
+		var path : Array[Vector3] = [dest]
+		var dist : int = cells_weight[dest.x][dest.y][dest.z]
+		if dist == 0: return ## Already at lowest depth
+		for i in range(dist):
+			path = weightmap_backtrack(path[-1], path)
+		
+		for cell in path:
+			## Set the cells to 0. default is -1, so anything that's not -1 will be checked later
+			cells_index[cell.x][cell.y][cell.z] = 0
 
+	func weightmap_directional_pass() -> void:
+		pass
 
 func generate():
 	print("Generating")
@@ -166,4 +233,3 @@ func generate():
 		for scene in smap.scenes:
 			scene[0].position = scene[1]*offsetScale
 			self.call_deferred("add_child", scene[0])
-			#scene[0].owner = self
