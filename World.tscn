@@ -1,13 +1,33 @@
-[gd_scene load_steps=3 format=3 uid="uid://bn87nnd18mh6s"]
+[gd_scene load_steps=6 format=3 uid="uid://bn87nnd18mh6s"]
 
-[ext_resource type="Script" path="res://root.gd" id="1_ii8m3"]
+[ext_resource type="PackedScene" uid="uid://l0ja5ces7c15" path="res://TestGeneration.tscn" id="1_ab5vp"]
+[ext_resource type="Script" path="res://CameraRotor.gd" id="2_vyfst"]
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_bn3bp"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_yjm30"]
 
-[node name="root" type="Node3D"]
-script = ExtResource("1_ii8m3")
+[sub_resource type="Sky" id="Sky_wqp35"]
+sky_material = SubResource("ProceduralSkyMaterial_yjm30")
 
-[node name="GridMap" type="GridMap" parent="."]
+[sub_resource type="Environment" id="Environment_oyxp4"]
+background_mode = 2
+sky = SubResource("Sky_wqp35")
 
-[node name="MeshInstance3d" type="MeshInstance3D" parent="."]
-mesh = SubResource("ArrayMesh_bn3bp")
+[node name="World" type="Node3D"]
+
+[node name="Node3d" parent="." instance=ExtResource("1_ab5vp")]
+
+[node name="Rotor" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 7, 7)
+script = ExtResource("2_vyfst")
+
+[node name="RotorB" type="Node3D" parent="Rotor"]
+
+[node name="Camera3D" type="Camera3D" parent="Rotor/RotorB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20)
+current = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_oyxp4")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.5, 0.836516, 0.224144, 0, -0.258819, 0.965926, 0.866025, -0.482963, -0.12941, 0, 0, 0)
