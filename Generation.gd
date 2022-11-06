@@ -1,7 +1,7 @@
 @tool
 extends Node3D
 
-var map : GridMap
+var smap : SizeMap
 
 @export var offsetScale : float = 1.0
 
@@ -12,6 +12,17 @@ var map : GridMap
 	set(_v):
 		generate()
 		_generate = false
+
+@export var _debugVectorVisualizer : Vector3i = Vector3i.ZERO :
+	get: return _debugVectorVisualizer
+	set(_v):
+		_debugVectorVisualizer = _v
+		debugVectorVisualizer()
+@export var _queryCellData : bool = false:
+	get: return false
+	set(_v):
+		query_cell_data()
+		_queryCellData = false
 
 const NEUMANN_OFFSET : Array[Vector3] = [
 							Vector3(1, 0, 0), ## Positive X		0
@@ -25,20 +36,25 @@ const NEUMANN_OFFSET : Array[Vector3] = [
 var childNodes : Array[Node3D] = []
 
 class SizeMap:
-	var size : Vector3 = Vector3(100, 100, 100)
+	var size : Vector3 = Vector3(50, 50, 50)
 	var scenes : Array ## All added Scenes
 	var cells : Array ## All cells
 	var cells_nz : Array ## Non-Zero cells
 	var cells_weight : Array ## Weight map for cells
 	var cells_index : Array ## Cell index map
 	var doorCells : Array ## Array of cells that connect to doors, and their orientation
+	var jointDict : Dictionary = {} ## Dictionary to contain the hallway joints
+	var pathCells : Array[Vector3]
+	var tree : SceneTree
 	
-	func _init(_size:Vector3=size) -> void:
+	func _init(_tree:SceneTree, _size:Vector3=size) -> void:
+		tree = _tree
 		size = _size
 		for x in range(size.x):
 			var _x : Array = []
 			var nz_x : Array = []
 			var w_x : Array = []
+			var i_x : Array = []
 			for y in range(size.y):
 				var _y : Array = []
 				var nz_y : Array = []
@@ -50,10 +66,43 @@ class SizeMap:
 				_x.append(_y)
 				nz_x.append(nz_y)
 				w_x.append(w_y)
+				i_x.append(w_y.duplicate())
 			cells.append(_x)
 			cells_nz.append(nz_x)
 			cells_weight.append(w_x)
-			cells_index.append(w_x)
+			cells_index.append(i_x)
+		load_dict()
+
+	func load_dict() -> void:
+		jointDict = {}
+		jointDict["y"] = {
+			"1s":load("res://Assets/Resources/Generated/Prebuilt/y1s.obj"),
+			"2":load("res://Assets/Resources/Generated/Prebuilt/y2.obj"),
+			"2c":load("res://Assets/Resources/Generated/Prebuilt/y2c.obj"),
+			"2s":load("res://Assets/Resources/Generated/Prebuilt/y2s.obj"),
+			"3":load("res://Assets/Resources/Generated/Prebuilt/y3.obj"),
+			"4":load("res://Assets/Resources/Generated/Prebuilt/y4.obj")
+		}
+		jointDict["y1-"] = {
+			"2":load("res://Assets/Resources/Generated/Prebuilt/y1-2.obj"),
+			"2c":load("res://Assets/Resources/Generated/Prebuilt/y1-2c.obj"),
+			"2e":load("res://Assets/Resources/Generated/Prebuilt/y1-2e.obj"),
+			"3":load("res://Assets/Resources/Generated/Prebuilt/y1-3.obj"),
+			"4":load("res://Assets/Resources/Generated/Prebuilt/y1-4.obj")
+		}
+		jointDict["y-1-"] = {
+			"2":load("res://Assets/Resources/Generated/Prebuilt/y-1-2.obj"),
+			"2c":load("res://Assets/Resources/Generated/Prebuilt/y-1-2c.obj"),
+			"2e":load("res://Assets/Resources/Generated/Prebuilt/y-1-2e.obj"),
+			"3":load("res://Assets/Resources/Generated/Prebuilt/y-1-3.obj"),
+			"4":load("res://Assets/Resources/Generated/Prebuilt/y-1-4.obj")
+		}
+		jointDict["y0-"] = {
+			"2":load("res://Assets/Resources/Generated/Prebuilt/y0-2.obj"),
+			"2c":load("res://Assets/Resources/Generated/Prebuilt/y0-2c.obj"),
+			"3":load("res://Assets/Resources/Generated/Prebuilt/y0-3.obj"),
+			"4":load("res://Assets/Resources/Generated/Prebuilt/y0-4.obj")
+		}
 	
 	## Returns the distance vectors at requested cell
 	func get_cell_space(cell:Vector3) -> Vector3:
@@ -72,7 +121,7 @@ class SizeMap:
 		return arr
 	
 	## Set a cell to zero and update all the dependant cells
-	func zero_cell_recursive(cell:Vector3) -> void:
+	func zero_cell_recursive(cell:Vector3, isEdge:bool=false) -> void:
 		for x in range(cell.x, size.x):
 			cells[x][cell.y][cell.z].x = max(min(cells[x][cell.y][cell.z].x,
 			(cells[x][cell.y][cell.z].x - cell.x)), 0)
@@ -92,14 +141,15 @@ class SizeMap:
 			cells[cell.x][cell.y][z].z -= max(cells[cell.x][cell.y][z].z - z, 0)
 		
 		cells_nz[cell.x][cell.y][cell.z] = -1 ## Flag cell as non-zero
+		if not isEdge: cells_index[cell.x][cell.y][cell.z] = 1 ## If it's not 1, it's free
 	
 	## Update the SizeMap space with the shape at position
 	func place_shape(pos:Vector3, _size:Vector3) -> void:
-		for x in range(_size.x):
-			for y in range(_size.y):
-				for z in range(_size.z):
+		for x in range(_size.x+1):
+			for y in range(_size.y+1):
+				for z in range(_size.z+1):
 					var _pos = pos + Vector3(x, y, z)
-					zero_cell_recursive(_pos)
+					zero_cell_recursive(_pos, (x == _size.x or y == _size.y or z == _size.z))
 	
 	func check_fit(pos:Vector3, _size:Vector3, debugDepth:int=0) -> bool:
 		var space : Vector3 = get_cell_space(pos)
@@ -112,7 +162,7 @@ class SizeMap:
 			for y in range(0, upperBounds.y):
 				for z in range(0, upperBounds.z):
 					var pos : Vector3 = Vector3(x, y, z)
-					if check_fit(pos, roomSize, debugDepth):
+					if check_fit(pos, roomSize+Vector3.ONE, debugDepth):
 						place_shape(pos, roomSize)
 						return [true, pos]
 		return [false, null]
@@ -140,63 +190,71 @@ class SizeMap:
 	
 	func add_room_to_map(room:Room) -> void:
 		print("Room size: ", abs(room.boundingBox.position + room.boundingBox.size))
-		var res = boxfit(abs(room.boundingBox.position + room.boundingBox.size) + Vector3.ONE)
+		var res = boxfit(abs(room.boundingBox.position + room.boundingBox.size))
 		if res[0]: scenes.append([room, res[1]])
 		else: push_warning("Could not add room")
 	
+	## Register doors must be called *after* the scene nodes are part of the world
 	func register_doors() -> void:
-		for _scene in scenes: ## For each door
+		print("Registering Doors")
+		for _scene in scenes: ## For each scene
 			var room : Room = _scene[0]
-			var door : Array = room.doorData
-			var door_pos : Vector3 = door[0].position + _scene[1] ## get it's cell position (room pos + local pos)
-			var test_pos : Vector3 = door_pos + door[1]
-			if cells_nz[test_pos.x][test_pos.y][test_pos.z] == -1:
-				test_pos = door_pos - door[1]
-			doorCells.append([door_pos, door[1], test_pos]) ## Door position, direction, connected cell
-	
+			var doorArr : Array[Array] = room.get_doorData()
+			for door in doorArr:
+				var door_pos : Vector3 = door[0].global_position ##room.position + door[0].position ## get it's cell position (room pos + local pos)
+				##print(room.global_position, " ", door[0].global_position, " ", door_pos)
+				var test_pos : Vector3 = door_pos + (Vector3(door[1], door[1], door[1])/2)
+				var path_pos : Vector3 = door_pos + Vector3(door[1], door[1], door[1])
+
+				doorCells.append([door_pos, door[1], test_pos, path_pos]) ## Door position, direction, connected cell
+
 	func create_map(pos:Vector3, path_open:Array[Vector3], level:int) -> Array[Vector3]:
 		## Generate a distance based on the map
 		path_open.erase(pos)
-		var x_valid : bool = pos.x >= 0 and pos.x <= size.x ## Is within the X bounds
-		var y_valid : bool = pos.y >= 0 and pos.y <= size.y ## Is within the X bounds
-		var z_valid : bool = pos.z >= 0 and pos.z <= size.z ## Is within the X bounds
+		var x_valid : bool = pos.x >= 1 and pos.x < size.x-1 ## Is within the X bounds
+		var y_valid : bool = pos.y >= 1 and pos.y < size.y-1 ## Is within the X bounds
+		var z_valid : bool = pos.z >= 1 and pos.z < size.z-1 ## Is within the X bounds
 		if not (x_valid and y_valid and z_valid): return path_open
 		for offset in NEUMANN_OFFSET:
 			var test_pos : Vector3 = pos + offset
-			## (below) Checkng the cell beneath is not a room, and hasn't been set yet
-			if (cells_nz[test_pos.x][test_pos.y][test_pos.z] != -1 and ## If the cell isnt obstructed
-			cells_weight[test_pos.x][test_pos.y][test_pos.z] != -1): ## If the cell hasn't been checked yet
+			if (cells_index[test_pos.x][test_pos.y][test_pos.z] != 1 and ## If the cell isnt obstructed
+			cells_weight[test_pos.x][test_pos.y][test_pos.z] == -1): ## If the cell hasn't been checked yet
+				#print("cell is valid")
 				cells_weight[test_pos.x][test_pos.y][test_pos.z] = level ## Set the cell in the map to the depth
 				path_open.append(test_pos) ## add the cell to the path
 		return path_open
 	
-	func weightmap_generate() -> void:
+	func weightmap_generate(startingpos:Vector3=Vector3.ZERO) -> void:
 		print("Calculating Weightmap")
-		var startingpos : Vector3 = Vector3.ZERO
 		var path_open : Array[Vector3] = [startingpos]
-		var level : int = 1 ## the depth / distance from the starting point
-		while len(path_open) > 0 and level < 10000: ## While there's still unchecked rooms
+		var level : int = 0 ## the depth / distance from the starting point
+		while len(path_open) > 0 and level < 500: ## While there's still unchecked rooms
 			var _path_open = path_open.duplicate()
 			for point in _path_open:
 				path_open = create_map(point, path_open, level)
 			level += 1
+			if level % 50 == 1:
+				await tree.process_frame
+				print(level)
+		print("Weightmap highest depth: ", level)
+		return
 	
 	func sort_by_2nd(a:Array, b:Array) -> bool: return a[1] > b[1]
 	
 	## Weighmap backtrack gets the lowest weighted cell within the sizemap's bounds
 	func weightmap_backtrack(pos:Vector3, path:Array[Vector3]) -> Array[Vector3]:
-		var _path : Array[Vector3] = [] ## Array to contain the possible neighbours
+		var _path : Array[Array] = [] ## Array to contain the possible neighbours
 		var _result : Array[Vector3] = path.duplicate() ## Duplicate as to not alter the original
 		
 		for offset in NEUMANN_OFFSET: ## For each neighouring cell
 			var test_pos : Vector3 = pos + offset
 			var test_depth : int = cells_weight[test_pos.x][test_pos.y][test_pos.z]
 			## Method of removing lattice, if there's aready a connected hallway, end the path
-			if cells_weight[test_pos.x][test_pos.y][test_pos.z] != -1:
+			if test_pos in pathCells:
 				_result.append(test_pos)
 				return _result
 			## Check if the cell isn't a wall
-			if cells_nz[test_pos.x][test_pos.y][test_pos.z] != -1:
+			if cells_index[test_pos.x][test_pos.y][test_pos.z] == -1:
 				_path.append([test_pos, test_depth]) ## Make it checkable
 		
 		_path.sort_custom(self.sort_by_2nd) ## Sorts via the 2nd element of array
@@ -207,21 +265,159 @@ class SizeMap:
 	func weightmap_get_path(dest:Vector3) -> void:
 		var path : Array[Vector3] = [dest]
 		var dist : int = cells_weight[dest.x][dest.y][dest.z]
-		if dist == 0: return ## Already at lowest depth
+		if dist <= 0:
+			print("Distance <= 0, returning")
+			return ## Already at lowest depth
+		else:
+			print("Backtracking from %s, distance of %s" % [dest, dist])
 		for i in range(dist):
 			path = weightmap_backtrack(path[-1], path)
-		
 		for cell in path:
 			## Set the cells to 0. default is -1, so anything that's not -1 will be checked later
-			cells_index[cell.x][cell.y][cell.z] = 0
+			pathCells.append(cell)
+	
+	func generate_paths(start:Vector3=Vector3(10, 10, 10)):
+		register_doors()
+		await weightmap_generate(start)
 
-	func weightmap_directional_pass() -> void:
-		pass
+		## Pathfind from one cell to another
+		await pathCells.append(start + Vector3(0.5, 0.5, 0.5))
+		for cellA in doorCells:
+			weightmap_get_path(cellA[2])
+	
+	func get_cell_load_data(cell:Vector3) -> Array: ## Returns: [ArrayMesh, orientation]
+		var order : Array[int] = [0, 0, 0, 0, 0, 0] ## N E S W U D	
+		
+		## Check for connected cells
+		order[0] = int((cell + Vector3(0, 0, 1)) in pathCells)
+		order[1] = int((cell + Vector3(1, 0, 0)) in pathCells)
+		order[2] = int((cell + Vector3(0, 0, -1)) in pathCells)
+		order[3] = int((cell + Vector3(-1, 0, 0)) in pathCells)
+		order[4] = int((cell + Vector3(0, 1, 0)) in pathCells)
+		order[5] = int((cell + Vector3(0, -1, 0)) in pathCells)
+		
+		## Check for doors
+
+		for door in doorCells:
+			if door[0] == cell - Vector3(0.5, 0.5, 0.5): ## Compensate for 0.5 offset
+				print("Door cell found")
+				if door[1] < 0: ## If it's -1, so backwards
+					if cells_index[cell.x+1][cell.y][cell.z] == 1:
+						order[0] = 1
+					if cells_index[cell.x][cell.y+1][cell.z] == 1:
+						order[4] = 1
+					if cells_index[cell.x][cell.y][cell.z+1] == 1:
+						order[1] = 1
+				else: ## It's 1, so fowards
+					if cells_index[cell.x-1][cell.y][cell.z] == 1:
+						order[3] = 1
+					if cells_index[cell.x][cell.y-1][cell.z] == 1:
+						order[5] = 1
+					if cells_index[cell.x][cell.y][cell.z-1] == 1:
+						order[2] = 1
+		print(order)
+		
+		var prefix : String = ""
+		## Get the vertical prefix
+		if order[4]: ## Up
+			if order[5]: ## Up and Down
+				prefix = "y"
+			else: ## Only Up
+				prefix = "y1-"
+		elif order[5]: ## down, no up
+			prefix = "y-1-"
+		else: ## No up or down
+			prefix = "y0-"
+		
+		# Get the horisontal connects 
+		var count : int = order[0] + order[1] + order[2] + order[3]
+		var cfix : String = str(count)
+		
+		if count == 2: ## If there's two horisontal connections
+			if order[0] != order[2]: ## If they're not parallel
+				cfix = "2c" ## Mark as corner
+		elif count == 1: ## Only one horisontal connection
+			if order[4] and order[5]:
+				cfix = "1s"
+			elif order[4] or order[5]:
+				cfix = "2e" ## Mark as elbow / vertical corner 
+			else:
+				cfix = "2"
+		elif count == 0: ## No horisontal connections
+			if order[4] and order[5]: 
+				cfix = "2s" ## marks as only up and down
+			else:
+				cfix = "2"
+		print(prefix, cfix, " ", count)
+		var ori : float = 0 ## Orientation of the object
+		match count:
+			0:
+				pass ## Orientation doesn't matter
+			1:
+				if order[0]: ori = 0 # North
+				if order[1]: ori = 0#-PI/2 # East
+				if order[2]: ori = PI # South
+				if order[3]: ori = -PI/2 # West
+			2:
+				if order[0] == order[2]: ## if parallel
+					if order[0]:
+						ori = PI/2
+					else:
+						ori = 0
+				else:
+					match [order[0], order[1], order[2], order[3]]:
+						[1, 1, 0, 0]:
+							ori = 0
+						[0, 1, 1, 0]:
+							ori = PI ## Checked
+						[0, 0, 1, 1]:
+							ori = -PI/2
+						[1, 0, 0, 1]:
+							ori = 0#PI/2
+						_:
+							pass
+			3:
+				if not order[0]:
+					ori = 0
+				if not order[1]:
+					ori = -PI/2
+				if not order[2]:
+					ori = PI
+				if not order[3]:
+					ori = PI/2
+			4:
+				pass ## Orientation doesn't matter
+		
+		return [jointDict[prefix][cfix], ori, count, order]
+	
+	func spawn_cell(cell:Vector3, target:Node3D, offset:Vector3=Vector3.ZERO, material:Material=null) -> void:
+		#print(cell)
+		var cdata : Array = get_cell_load_data(cell)
+		var mi : MeshInstance3D = MeshInstance3D.new()
+		mi.position = cell + offset
+		mi.mesh = cdata[0]
+		mi.rotate_y(cdata[1])
+		if material: mi.material_override = material
+		target.call_deferred("add_child", mi)
+	
+	func load_all_paths(target:Node3D, material:Material=null) -> void:
+		print("Loading cells")
+		for cell in pathCells:
+			spawn_cell(cell, target, Vector3.ZERO, material)
+	
+	func showUsedCells(target:Node3D) -> void:
+		print("Showing used cells")
+		for x in size.x:
+			for y in size.y:
+				for z in size.z:
+					if cells_index[x][y][z] == 1:
+						spawn_cell(Vector3(x, y, z), target, Vector3(0.5, 0.5, 0.5))
+
 
 func generate():
 	print("Generating")
 	
-	var smap : SizeMap = SizeMap.new()
+	smap = SizeMap.new(get_tree())
 	for child in get_children():
 		child.queue_free()
 	
@@ -233,3 +429,28 @@ func generate():
 		for scene in smap.scenes:
 			scene[0].position = scene[1]*offsetScale
 			self.call_deferred("add_child", scene[0])
+		await get_tree().process_frame
+		await smap.generate_paths()
+		smap.load_all_paths(self, load("res://DebugMaterial.tres"))
+#		smap.showUsedCells(self)
+	print("Generation complete")
+
+func debugVectorVisualizer():
+	print("Debug cell visualizing: ", _debugVectorVisualizer)
+	if smap == null: 
+		push_warning("smap is null, please generate SizeMap first")
+		return
+	smap.spawn_cell(_debugVectorVisualizer, self, Vector3(0.5, 0.5, 0.5))
+
+func query_cell_data():
+	if smap == null: 
+		push_warning("smap is null, please generate SizeMap first")
+		return
+	
+	## Weight/depth
+	## Is free
+	print({
+	"Cell Weight":smap.cells_weight[_debugVectorVisualizer.x][_debugVectorVisualizer.y][_debugVectorVisualizer.z],
+	"Cell Index":smap.cells_index[_debugVectorVisualizer.x][_debugVectorVisualizer.y][_debugVectorVisualizer.z],
+	"Cell NZ":smap.cells_nz[_debugVectorVisualizer.x][_debugVectorVisualizer.y][_debugVectorVisualizer.z]
+	})
