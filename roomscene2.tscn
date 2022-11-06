@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://Assets/Resources/Classes/Room.gd" id="1_7nxxu"]
 [ext_resource type="Material" uid="uid://cutbyweydlfgf" path="res://Assets/Resources/Models/materials/Visualizer.tres" id="2_ltfud"]
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_qqady"]
+[sub_resource type="ArrayMesh" id="ArrayMesh_o6gbn"]
 _surfaces = [{
 "aabb": AABB(-7, 0, 0, 7, 1e-05, 7),
 "format": 1,
@@ -56,7 +56,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 0)
 material_override = ExtResource("2_ltfud")
 cast_shadow = 0
 gi_mode = 0
-mesh = SubResource("ArrayMesh_qqady")
+mesh = SubResource("ArrayMesh_o6gbn")
 
 [node name="Content" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 0)
@@ -65,8 +65,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 0)
 
 [node name="Door1" type="Marker3D" parent="Content/doors"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 4)
+metadata/alignment = 1
 
 [node name="RoomMesh" type="Node3D" parent="Content"]
+visible = false
 
 [node name="MeshInstance3d" type="MeshInstance3D" parent="Content/RoomMesh"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.14428, 1.2243, 6.06409)

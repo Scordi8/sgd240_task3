@@ -1,0 +1,81 @@
+[gd_resource type="VisualShader" load_steps=7 format=3 uid="uid://hp62ni0wxm4s"]
+
+[sub_resource type="VisualShaderNodeVaryingGetter" id="VisualShaderNodeVaryingGetter_7nglc"]
+varying_name = "worldPos"
+varying_type = 3
+
+[sub_resource type="VisualShaderNodeVectorFunc" id="VisualShaderNodeVectorFunc_lrxhk"]
+function = 18
+
+[sub_resource type="VisualShaderNodeInput" id="VisualShaderNodeInput_xvrj2"]
+input_name = "node_position_world"
+
+[sub_resource type="VisualShaderNodeInput" id="VisualShaderNodeInput_moc6r"]
+input_name = "vertex"
+
+[sub_resource type="VisualShaderNodeVectorOp" id="VisualShaderNodeVectorOp_sc2nb"]
+
+[sub_resource type="VisualShaderNodeVaryingSetter" id="VisualShaderNodeVaryingSetter_hikxq"]
+varying_name = "worldPos"
+varying_type = 3
+
+[resource]
+code = "shader_type spatial;
+
+// Varyings
+varying vec3 worldPos;
+
+
+
+
+void vertex() {
+
+// Input:3
+	vec3 n_out3p0 = VERTEX;
+
+
+// Input:2
+	vec3 n_out2p0 = NODE_POSITION_WORLD;
+
+
+// VectorOp:4
+	vec3 n_out4p0 = n_out3p0 + n_out2p0;
+
+
+// VaryingSetter:5
+	worldPos = n_out4p0;
+
+
+}
+
+void fragment() {
+// VaryingGetter:2
+	vec3 n_out2p0 = worldPos;
+
+
+// VectorFunc:3
+	vec3 n_out3p0 = fract(n_out2p0);
+
+
+// Output:0
+	ALBEDO = n_out3p0;
+
+
+}
+"
+graph_offset = Vector2(-605.165, 54.9694)
+varyings/worldPos = "0,3"
+nodes/vertex/2/node = SubResource("VisualShaderNodeInput_xvrj2")
+nodes/vertex/2/position = Vector2(-420, 240)
+nodes/vertex/3/node = SubResource("VisualShaderNodeInput_moc6r")
+nodes/vertex/3/position = Vector2(-420, 160)
+nodes/vertex/4/node = SubResource("VisualShaderNodeVectorOp_sc2nb")
+nodes/vertex/4/position = Vector2(-43.8321, 290.792)
+nodes/vertex/5/node = SubResource("VisualShaderNodeVaryingSetter_hikxq")
+nodes/vertex/5/position = Vector2(400, 480)
+nodes/vertex/connections = PackedInt32Array(3, 0, 4, 0, 2, 0, 4, 1, 4, 0, 5, 0)
+nodes/fragment/2/node = SubResource("VisualShaderNodeVaryingGetter_7nglc")
+nodes/fragment/2/position = Vector2(-300, 220)
+nodes/fragment/3/node = SubResource("VisualShaderNodeVectorFunc_lrxhk")
+nodes/fragment/3/position = Vector2(-58.9983, 203.963)
+nodes/fragment/connections = PackedInt32Array(2, 0, 3, 0, 3, 0, 0, 0)

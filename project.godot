@@ -24,6 +24,11 @@ config/name="ProcGen3D"
 config/features=PackedStringArray("4.0")
 config/icon="res://icon.png"
 
+[filesystem]
+
+import/blender/enabled=false
+import/fbx/enabled=false
+
 [shader_globals]
 
 ViewportSize={

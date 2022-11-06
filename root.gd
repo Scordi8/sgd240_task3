@@ -50,7 +50,7 @@ func _generate():
 	if (sides >> 4) % 2: # If there's a up component
 		addface(arr_mesh, Vector3.LEFT, PI/2, quadverts)
 
-	if (sides >> 5) % 2: # If there's a up component
+	if (sides >> 5) % 2: # If there's a down component
 		addface(arr_mesh, Vector3.LEFT, -PI/2, quadverts)
 
 	mesh.mesh = arr_mesh

@@ -6,7 +6,7 @@ class_name Room extends Node3D
 @onready var contentNode : Node3D = $Content
 @export var roomMeshNode : NodePath
 @export var doorNodesRoot : NodePath
-var doorData : Array[Array] = []
+var doorData : Array[Marker3D] = []
 const visualizerMaterial : String = "res://Assets/Resources/Models/materials/Visualizer.tres"
 
 @export var _validate : bool = false :
@@ -24,10 +24,11 @@ const visualizerMaterial : String = "res://Assets/Resources/Models/materials/Vis
 @export var visualizermeshNode : NodePath
 var visualizermesh : MeshInstance3D
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass # Replace with function body.
-
+func get_doorData() -> Array[Array]:
+	var arr : Array = []
+	for door in get_node(doorNodesRoot).get_children():
+		arr.append([door, door.get_meta("alignment")])
+	return arr
 
 func validate():
 	print("Validating")
@@ -66,7 +67,6 @@ func validate():
 	## Marker position rounding
 	for _child in get_node(doorNodesRoot).get_children():
 		var child : Marker3D = _child
-		var door : Array = [child, Vector3.ZERO] ## Node , direction
 		child.position = round(child.position)
 
 		## get closest side
@@ -121,14 +121,14 @@ func validate():
 				child.position.x = wallpos.x
 				child.position.y = clampY.call(child, boundingBox)
 				child.position.z = clampZ.call(child, boundingBox)
-				door[1] = Vector3(1, 0, 0)
+				child.set_meta("alignment", (int(wallpos.x > mid.x) + (int(wallpos.x < mid.x) * -1)))
 			else: # X is closer then y, but not closer then z, z is closest
 				print("Z is closest A")
 				## Wallpos Z is the closest
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = clampY.call(child, boundingBox)
 				child.position.z = wallpos.z
-				door[1] = Vector3(0, 0, 1)
+				child.set_meta("alignment", (int(wallpos.z > mid.z) + (int(wallpos.z < mid.z) * -1)))
 		else:
 			if disttowall.y < disttowall.z:
 				print("Y is closest")
@@ -136,15 +136,15 @@ func validate():
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = wallpos.y
 				child.position.z = clampZ.call(child, boundingBox)
-				door[1] = Vector3(0, 1, 0)
+				child.set_meta("alignment", (int(wallpos.y > mid.y) + (int(wallpos.y < mid.y) * -1)))
 			else:
 				print("Z is closest B")
 				## Wallpos Z is the closest
 				child.position.x = clampX.call(child, boundingBox)
 				child.position.y = clampY.call(child, boundingBox)
 				child.position.z = wallpos.z
-				door[1] = Vector3(0, 0, 1)
-		doorData.append(door)
+				child.set_meta("alignment", (int(wallpos.z > mid.z) + (int(wallpos.z < mid.z) * -1)))
+		doorData.append(child)
 	## Marker position ended
 	
 	## Reposition everything so it fits within the boundries
