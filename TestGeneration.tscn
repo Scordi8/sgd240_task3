@@ -6,4 +6,5 @@
 
 [node name="Node3d" type="Node3D"]
 script = ExtResource("1_j2fla")
-roomList = [ExtResource("2_i2ttu"), ExtResource("3_bs4yb"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu"), ExtResource("3_bs4yb"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu")]
+roomList = [ExtResource("3_bs4yb"), ExtResource("3_bs4yb"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu"), ExtResource("3_bs4yb"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu"), ExtResource("2_i2ttu")]
+_debugVectorVisualizer = Vector3i(5, 2, 10)
