@@ -1,6 +1,7 @@
 @tool
 extends Node3D
 
+## This script was used to check procedural mesh generation, is not used, but has too much potential and tech use to remove 
 
 @export var generate : bool = false:
 	get:return false

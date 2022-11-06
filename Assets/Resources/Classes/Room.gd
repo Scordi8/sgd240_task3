@@ -3,18 +3,19 @@ class_name Room extends Node3D
 
 @export var boundingBox : AABB
 
-@onready var contentNode : Node3D = $Content
-@export var roomMeshNode : NodePath
-@export var doorNodesRoot : NodePath
-var doorData : Array[Marker3D] = []
+@onready var contentNode : Node3D = $Content ## Node tha contains all the content
+@export var roomMeshNode : NodePath ## Nodepath to node with all mesh and collision
+@export var doorNodesRoot : NodePath ## Nodepath to node with all door Markers
+var doorData : Array[Marker3D] = [] ## list of all the door markers
 const visualizerMaterial : String = "res://Assets/Resources/Models/materials/Visualizer.tres"
 
+## Editor bool to trigger validation and visualization
 @export var _validate : bool = false :
 	get:return false
 	set(_v):
 		_validate = false
 		validate()
-
+## Editor bool to trigger visualization only
 @export var _visualize : bool = false :
 	get:return false
 	set(_v):
@@ -24,6 +25,7 @@ const visualizerMaterial : String = "res://Assets/Resources/Models/materials/Vis
 @export var visualizermeshNode : NodePath
 var visualizermesh : MeshInstance3D
 
+## retrieve the data of all the doors without re-validifying the room
 func get_doorData() -> Array[Array]:
 	var arr : Array = []
 	for door in get_node(doorNodesRoot).get_children():
